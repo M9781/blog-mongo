@@ -58,11 +58,47 @@ router.get("/posts/:id", async function (req, res) {
       weekday: "long",
       year: "numeric",
       month: "long",
-      day: "numeric"
-    })
+      day: "numeric",
+    }),
   };
-  
+
   res.render("post-detail", { post: postData });
+});
+
+router.get("/posts/:id/edit", async function (req, res) {
+  const postId = req.params.id;
+
+  const query = `
+  SELECT * FROM posts
+  WHERE posts.id = ${postId}
+  `;
+  const [posts] = await db.query(query);
+
+  if (!posts || posts.length === 0) {
+    return res.status(404).render("404");
+  }
+
+  res.render("update-post", { post: posts[0] });
+});
+
+router.post("/posts/:id/edit", async function (req, res) {
+  const data = [
+    req.body.title,
+    req.body.summary,
+    req.body.content,
+    req.params.id,
+  ];
+  const query = `
+  UPDATE posts SET title = ?, summary = ?, body = ? 
+  WHERE id = ?
+  `;
+  await db.query(query, data);
+  res.redirect("/posts");
+});
+
+router.post("/posts/:id/delete", async function (req, res) {
+  await db.query("DELETE FROM posts WHERE id = ?", [req.params.id]);
+  res.redirect("/posts");
 });
 
 module.exports = router;
