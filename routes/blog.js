@@ -14,21 +14,26 @@ router.get("/posts", async function (req, res) {
   const posts = await db
     .getDb()
     .collection("posts")
-    .find({}, { title: 1, summary: 1, "author.name": 1 })
+    .find()
+    .project({ title: 1, summary: 1, "author.name": 1 })
     .toArray();
 
   res.render("posts-list", { posts: posts });
 });
 
 router.get("/new-post", async function (req, res) {
-  // OK
   const authors = await db.getDb().collection("authors").find().toArray();
   res.render("create-post", { authors: authors });
 });
 
 router.post("/posts", async function (req, res) {
-  // OK
-  const authorId = new ObjectId(req.body.author);
+  let authorId;
+
+  try {
+    authorId = new ObjectId(req.params.author);
+  } catch (error) {
+    return res.status(404).render("404");
+  }
 
   const author = await db
     .getDb()
@@ -48,9 +53,18 @@ router.post("/posts", async function (req, res) {
 });
 
 router.get("/posts/:id", async function (req, res) {
-  // OK
-  const postId = new ObjectId(req.params.id);
-  const post = await db.getDb().collection("posts").findOne({ _id: postId });
+  let postId;
+
+  try {
+    postId = new ObjectId(req.params.id);
+  } catch (error) {
+    return res.status(404).render("404");
+  }
+
+  const post = await db
+    .getDb()
+    .collection("posts")
+    .findOne({ _id: postId }, { projection: { summary: 0 } });
 
   if (!post || post.length === 0) {
     return res.status(404).render("404");
@@ -71,13 +85,21 @@ router.get("/posts/:id", async function (req, res) {
 });
 
 router.get("/posts/:id/edit", async function (req, res) {
-  const postId = new ObjectId(req.params.id);
+  let postId;
 
-  const post = await db.getDb().collection("posts").findOne({ _id: postId });
-
-  if (!post || post.length === 0) {
+  try {
+    postId = new ObjectId(req.params.id);
+  } catch (error) {
     return res.status(404).render("404");
   }
+
+  const post = await db
+    .getDb()
+    .collection("posts")
+    .findOne(
+      { _id: postId },
+      { projection: { title: 1, summary: 1, body: 1 } }
+    );
 
   if (!post || post.length === 0) {
     return res.status(404).render("404");
@@ -87,7 +109,13 @@ router.get("/posts/:id/edit", async function (req, res) {
 });
 
 router.post("/posts/:id/edit", async function (req, res) {
-  const postId = new ObjectId(req.params.id);
+  let postId;
+
+  try {
+    postId = new ObjectId(req.params.id);
+  } catch (error) {
+    return res.status(404).render("404");
+  }
 
   const data = {
     title: req.body.title,
@@ -103,7 +131,14 @@ router.post("/posts/:id/edit", async function (req, res) {
 });
 
 router.post("/posts/:id/delete", async function (req, res) {
-  const postId = new ObjectId(req.params.id);
+  let postId;
+
+  try {
+    postId = new ObjectId(req.params.id);
+  } catch (error) {
+    return res.status(404).render("404");
+  }
+
   await db.getDb().collection("posts").deleteOne({ _id: postId });
   res.redirect("/posts");
 });
