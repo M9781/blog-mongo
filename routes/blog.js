@@ -1,6 +1,8 @@
 const express = require("express");
 
+const mongodb = require("mongodb");
 const db = require("../data/database");
+const ObjectId = mongodb.ObjectId;
 
 const router = express.Router();
 
@@ -18,22 +20,29 @@ router.get("/posts", async function (req, res) {
 });
 
 router.get("/new-post", async function (req, res) {
-  const [authors] = await db.query("SELECT * FROM authors");
+  // OK
+  const authors = await db.getDb().collection("authors").find().toArray();
   res.render("create-post", { authors: authors });
 });
 
 router.post("/posts", async function (req, res) {
-  const data = [
-    req.body.title,
-    req.body.summary,
-    req.body.content,
-    req.body.author,
-  ];
+  // OK
+  const authorId = new ObjectId(req.body.author);
+  const author = await db
+    .getDb()
+    .collection("authors")
+    .findOne({ _id: authorId });
 
-  await db.query(
-    "INSERT INTO posts (title, summary, body, author_id) VALUES (?)",
-    [data]
-  );
+  const newPost = {
+    title: req.body.title,
+    summary: req.body.summary,
+    body: req.body.content,
+    date: new Date(),
+    author: { id: authorId, name: author.name, email: author.email },
+  };
+
+  const result = await db.getDb().collection("posts").insertOne(newPost);
+  console.log(result);
   res.redirect("/posts");
 });
 
